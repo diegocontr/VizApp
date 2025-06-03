@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: ModelViz
+Version: 0.1.0
+Summary: Dashboard to 
+Author-email: Diego Contreras <diego.a.contr@gmail.com>
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Framework :: Streamlit
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: streamlit>=1.33.0
+Requires-Dist: pandas>=2.2.2
+Requires-Dist: numpy>=1.26.4
+Requires-Dist: matplotlib>=3.9.0
+Requires-Dist: plotly>=6.1.2
+Dynamic: license-file
+
+# VizApp

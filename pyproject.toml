@@ -1,0 +1,37 @@
+[project]
+name = "ModelViz"
+version = "0.1.0"
+description = "Dashboard to "
+authors = [
+    { name = "Diego Contreras", email = "diego.a.contr@gmail.com" }
+]
+dependencies = [
+    "streamlit>=1.33.0",
+    "pandas>=2.2.2",
+    "numpy>=1.26.4",
+    "matplotlib>=3.9.0", # Or "plotly>=5.22.0" if you prefer Plotly
+    # Add any other specific libraries your dashboard might need
+    # e.g., "scikit-learn", "seaborn", "openpyxl" for Excel support
+    "plotly>=6.1.2",
+]
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Framework :: Streamlit",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+#[tool.setuptools]
+# Specifies that packages are found under the "src" directory
+#packages = ["src/your_dashboard_package"] # IMPORTANT: Replace with the actual name of your package directory within 'src'
+
+#[tool.setuptools.package-data]
+# Adjust path if your data/assets are also within the src directory
+#"src/your_dashboard_package" = ["data/*.csv", "assets/*"] # Example for including data or assets
