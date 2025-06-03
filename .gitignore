@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.venv/
+venv/
+*.env
+.env.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.vscode/
+
+# Distribution / build
+.eggs/
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Editors
+.DS_Store
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Streamlit specific
+.streamlit/
+app_data/
+local_data/
+*.db # If you use SQLite or similar for local data
