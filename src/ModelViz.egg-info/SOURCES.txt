@@ -1,9 +1,0 @@
-LICENSE
-README.md
-pyproject.toml
-src/__init__.py
-src/ModelViz.egg-info/PKG-INFO
-src/ModelViz.egg-info/SOURCES.txt
-src/ModelViz.egg-info/dependency_links.txt
-src/ModelViz.egg-info/requires.txt
-src/ModelViz.egg-info/top_level.txt
