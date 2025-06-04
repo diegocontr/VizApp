@@ -1,13 +1,12 @@
-import streamlit
-import streamlit.web.cli as stcli
-import os, sys
+import sys
 
+import streamlit.web.cli as stcli
 
 # This script is designed to launch your Streamlit data visualization application.
 # It's configured to run `app/viz5.py`, ensuring a smooth user experience by disabling
 # development mode for a cleaner final product.
 
-'''
+"""
 --- PyInstaller Packaging Notes ---
 
 To make your Streamlit app easily shareable, you can package it into a single executable file
@@ -41,13 +40,13 @@ anything extra.
     pyinstaller --onefile --noconsole run.py --add-data "app/data/my_data.csv;data"
     ```
     Your Streamlit app can then access it using a path like `os.path.join(sys._MEIPASS, 'data', 'my_data.csv')`.
-'''
+"""
 
 if __name__ == "__main__":
     sys.argv = [
-        "streamlit", 
-        "run", 
+        "streamlit",
+        "run",
         "app/viz5.py",
         "--global.developmentMode=false",
-        ]
+    ]
     sys.exit(stcli.main())

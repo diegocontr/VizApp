@@ -1,5 +1,6 @@
+import ast  # For ast.literal_eval to safely parse string representations of literals
 import urllib.parse
-import ast # For ast.literal_eval to safely parse string representations of literals
+
 
 def key_generator(params: dict, preserve_types: bool = False) -> str:
     """
@@ -7,7 +8,7 @@ def key_generator(params: dict, preserve_types: bool = False) -> str:
 
     Args:
         params (dict): The dictionary of parameters.
-        preserve_types (bool): If True, attempts to preserve basic Python types 
+        preserve_types (bool): If True, attempts to preserve basic Python types
                                (str, int, float, bool, list, dict, tuple, None)
                                by storing their `repr()` string. Otherwise, all values
                                are converted to simple strings using `str()`.
@@ -15,7 +16,7 @@ def key_generator(params: dict, preserve_types: bool = False) -> str:
     Returns:
         str: A string key representing the parameters. Returns an empty string
              if the input dictionary is empty.
-             
+
     Raises:
         TypeError: If 'params' is not a dictionary.
     """
@@ -31,20 +32,21 @@ def key_generator(params: dict, preserve_types: bool = False) -> str:
     for key, value_obj in sorted_items:
         # URL encode the key (converted to string)
         encoded_key = urllib.parse.quote_plus(str(key))
-        
+
         # Convert value to its string representation
         if preserve_types:
             # Use repr() to get a string representation that ast.literal_eval can parse
             value_str_representation = repr(value_obj)
         else:
             value_str_representation = str(value_obj)
-        
+
         # URL encode the string representation of the value
         encoded_value = urllib.parse.quote_plus(value_str_representation)
-        
+
         key_parts.append(f"{encoded_key}={encoded_value}")
-        
+
     return "&".join(key_parts)
+
 
 def reverse_key_generator(key_string: str, preserved_types: bool = False) -> dict:
     """
@@ -52,7 +54,7 @@ def reverse_key_generator(key_string: str, preserved_types: bool = False) -> dic
 
     Args:
         key_string (str): The string key to reverse.
-        preserved_types (bool): If True, attempts to parse values using 
+        preserved_types (bool): If True, attempts to parse values using
                                 `ast.literal_eval` to restore original types.
                                 This should match the 'preserve_types' flag used
                                 during key generation.
@@ -60,7 +62,7 @@ def reverse_key_generator(key_string: str, preserved_types: bool = False) -> dic
     Returns:
         dict: The reconstructed dictionary of parameters. Returns an empty
               dictionary if the input string is empty.
-              
+
     Raises:
         TypeError: If 'key_string' is not a string.
         ValueError: If the key_string is malformed or if type restoration fails
@@ -72,21 +74,21 @@ def reverse_key_generator(key_string: str, preserved_types: bool = False) -> dic
         return {}  # Return empty dictionary for an empty key string
 
     params = {}
-    key_value_pairs = key_string.split('&')
+    key_value_pairs = key_string.split("&")
 
     for pair_str in key_value_pairs:
         if not pair_str:  # Should not happen with non-empty string split by '&' unless '&&'
             continue
 
         # Split only on the first occurrence of '='
-        parts = pair_str.split('=', 1)
+        parts = pair_str.split("=", 1)
         if len(parts) == 2:
             encoded_key, encoded_value_repr = parts
-            
+
             # URL decode key and value representation
             key = urllib.parse.unquote_plus(encoded_key)
             value_str_representation = urllib.parse.unquote_plus(encoded_value_repr)
-            
+
             if preserved_types:
                 try:
                     # ast.literal_eval is safer than eval() for evaluating literals
@@ -101,22 +103,21 @@ def reverse_key_generator(key_string: str, preserved_types: bool = False) -> dic
             else:
                 # Value remains a string (after unquoting)
                 value = value_str_representation
-            
+
             params[key] = value
         else:
             # This indicates a malformed pair (e.g., no '=' or an empty part from '&&')
             raise ValueError(f"Malformed key-value pair encountered: '{pair_str}' in key_string '{key_string}'")
-            
-    return params
 
+    return params
 
 
 # --- Function to get hierarchical parameter options ---
 def get_hierarchical_parameter_options(
     dict_of_all_plots: dict,
     key_order: list[str],
-    current_selection: dict = None, # Internally used for recursion
-    preserved_types_in_keys: bool = True
+    current_selection: dict = None,  # Internally used for recursion
+    preserved_types_in_keys: bool = True,
 ) -> dict:
     """
     Recursively discovers all available parameter options from dict_of_all_plots
@@ -147,26 +148,26 @@ def get_hierarchical_parameter_options(
     if current_selection is None:
         current_selection = {}
 
-    if not key_order: # Base case: no more keys in the hierarchy to process
+    if not key_order:  # Base case: no more keys in the hierarchy to process
         return {}
 
     current_param_name_to_find = key_order[0]
     remaining_key_order = key_order[1:]
-    
+
     options_for_current_param_value = set()
-    
+
     for key_str in dict_of_all_plots.keys():
         try:
             params_dict = reverse_key_generator(key_str, preserved_types=preserved_types_in_keys)
         except ValueError:
-            continue 
+            continue
 
         match_current_selection = True
         for sel_key, sel_value in current_selection.items():
             if params_dict.get(sel_key) != sel_value:
                 match_current_selection = False
                 break
-        
+
         if match_current_selection:
             if current_param_name_to_find in params_dict:
                 options_for_current_param_value.add(params_dict[current_param_name_to_find])
@@ -180,22 +181,18 @@ def get_hierarchical_parameter_options(
     for option_val in sorted_unique_options:
         new_selection_for_recursion = current_selection.copy()
         new_selection_for_recursion[current_param_name_to_find] = option_val
-        
+
         sub_options_tree = get_hierarchical_parameter_options(
-            dict_of_all_plots,
-            remaining_key_order, 
-            new_selection_for_recursion, 
-            preserved_types_in_keys
+            dict_of_all_plots, remaining_key_order, new_selection_for_recursion, preserved_types_in_keys
         )
         result_hierarchy_for_this_level[option_val] = sub_options_tree
-            
+
     return result_hierarchy_for_this_level
+
 
 # --- New function to get all distinct parameter values (non-hierarchical) ---
 def get_all_distinct_parameter_values(
-    dict_of_all_plots: dict,
-    parameter_names_of_interest: list[str],
-    preserved_types_in_keys: bool = True
+    dict_of_all_plots: dict, parameter_names_of_interest: list[str], preserved_types_in_keys: bool = True
 ) -> dict:
     """
     Finds all unique values for each specified parameter name across all
@@ -229,7 +226,7 @@ def get_all_distinct_parameter_values(
             # Skip malformed keys
             # print(f"Warning: Skipping malformed key: {key_str}")
             continue
-        
+
         # For each parameter we are interested in, check if it exists in the current params_dict
         for param_name in parameter_names_of_interest:
             if param_name in params_dict:
@@ -245,5 +242,5 @@ def get_all_distinct_parameter_values(
             # Fallback if types are mixed or unhashable (e.g., [1, 'a', True])
             # Sort by their string representation
             result[param_name] = sorted(list(values_set), key=str)
-            
+
     return result

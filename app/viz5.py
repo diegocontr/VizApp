@@ -1,23 +1,23 @@
-import streamlit as st
-import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import json
 from pathlib import Path
-from PIL import Image
-import plotly.express as px
-from io import StringIO
-from modelviz.config import config_labels, config_colors, analysis_explanations, dictionary_aggregated_values, custom_xticks
-from modelviz.data_loader import load_data_dict, load_logo
-from modelviz.sidebar_setup import setup_sidebar, select_config
-from modelviz.plotting import create_figure, map_xticks
+
+import streamlit as st
+from modelviz.config import (
+    analysis_explanations,
+    config_colors,
+    config_labels,
+    custom_xticks,
+    dictionary_aggregated_values,
+)
+from modelviz.data_loader import load_data_dict
 from modelviz.dataframe_display import display_dataframes
+from modelviz.plotting import create_figure
+from modelviz.sidebar_setup import select_config, setup_sidebar
 
 # ===========================
 # Configurable Paths
 # ===========================
-DATA_PATH = './data'
-IMAGE_PATH = './images/log.jpeg'
+DATA_PATH = "./data"
+IMAGE_PATH = "./images/log.jpeg"
 
 # Entry point
 if __name__ == "__main__":
@@ -31,20 +31,45 @@ if __name__ == "__main__":
         st.stop()
 
     (
-        selected_db, selected_analysis, selected_column, selected_agg, selected_ref,
-        selected_group, selected_targets, var_y_type, y0
+        selected_db,
+        selected_analysis,
+        selected_column,
+        selected_agg,
+        selected_ref,
+        selected_group,
+        selected_targets,
+        var_y_type,
+        y0,
     ) = select_config(data_dict, config_labels, analysis_explanations, dictionary_aggregated_values)
 
     fig_plotly, add_third_subplot = create_figure(
-        data_dict, config_labels, config_colors, custom_xticks,
-        selected_db, selected_analysis, selected_column, selected_agg, selected_ref,
-        selected_group, selected_targets, var_y_type, y0
+        data_dict,
+        config_labels,
+        config_colors,
+        custom_xticks,
+        selected_db,
+        selected_analysis,
+        selected_column,
+        selected_agg,
+        selected_ref,
+        selected_group,
+        selected_targets,
+        var_y_type,
+        y0,
     )
 
     st.header(f"{selected_column}.")
     st.plotly_chart(fig_plotly, use_container_width=True)
 
     display_dataframes(
-        data_dict, config_labels, selected_db, selected_analysis, selected_column,
-        selected_agg, selected_ref, selected_group, selected_targets, add_third_subplot
+        data_dict,
+        config_labels,
+        selected_db,
+        selected_analysis,
+        selected_column,
+        selected_agg,
+        selected_ref,
+        selected_group,
+        selected_targets,
+        add_third_subplot,
     )
