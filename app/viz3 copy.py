@@ -45,14 +45,6 @@ config_labels = {
     "download_buttons": {
         "df_csv": "Download Line Plot Data as CSV",
         "dfh_csv": "Download Bar Plot Data as CSV"
-    },
-    "help": {
-        "database": "Choose the database to analyze.",
-        "analysis_type": "Select the type of analysis to perform.",
-        "column_to_analyse": "Pick the column for analysis.",
-        "agg_function": "Select the aggregation function.",
-        "groupping": "Choose how to group the data.",
-        "target": "Select the target variable(s) for analysis."
     }
 }
 
@@ -145,11 +137,18 @@ def load_logo(image_path):
 # Main Streamlit App
 # ===========================
 
-def setup_sidebar(config_labels, IMAGE_PATH, DATA_PATH):
+def main():
+    # Set page configuration
+    st.set_page_config(page_title="Data Visualization Tool", layout="wide", page_icon="📊")
+
     # Load the logo
     logo = load_logo(IMAGE_PATH)
+
+    # Display the logo at the top of the sidebar
     if logo:
         st.sidebar.image(logo, use_container_width=True)
+
+    # Display the main header in the sidebar
     st.sidebar.header(config_labels["headers"]["main"])
 
     # Let the user select a file from the data folder
@@ -157,56 +156,53 @@ def setup_sidebar(config_labels, IMAGE_PATH, DATA_PATH):
     if not data_files:
         st.error("No data files found in the 'data' folder.")
         st.stop()
-    selected_file = st.sidebar.selectbox(config_labels["menus"]["file"], data_files)
-    return selected_file
 
-def select_config(data_dict, config_labels, analysis_explanations, dictionary_aggregated_values):
+    selected_file = st.sidebar.selectbox(config_labels["menus"]["file"], data_files)
+    data_dict = load_data_dict(Path(DATA_PATH) / selected_file)
+
+    if not data_dict:
+        st.stop()
+
+    # Configuration options
     databases = list(data_dict.keys())
     st.sidebar.header("Configuration")
-    selected_db = st.sidebar.selectbox(
-        config_labels["menus"]["database"], databases,
-        help=config_labels["help"]["database"]
-    )
+    selected_db = st.sidebar.selectbox(config_labels["menus"]["database"], databases)
+
     analysis_types = list(data_dict[selected_db].keys())
-    selected_analysis = st.sidebar.selectbox(
-        config_labels["menus"]["analysis_type"], analysis_types,
-        help=config_labels["help"]["analysis_type"]
-    )
+    selected_analysis = st.sidebar.selectbox(config_labels["menus"]["analysis_type"], analysis_types)
+
+    # Show explanation if available and not empty
     if selected_analysis in analysis_explanations and analysis_explanations[selected_analysis]:
         st.sidebar.write(analysis_explanations[selected_analysis])
+
     columns_to_analyse = list(data_dict[selected_db][selected_analysis].keys())
-    selected_column = st.sidebar.selectbox(
-        config_labels["menus"]["column_to_analyse"], columns_to_analyse,
-        help=config_labels["help"]["column_to_analyse"]
-    )
+    selected_column = st.sidebar.selectbox(config_labels["menus"]["column_to_analyse"], columns_to_analyse)
     agg_functions = list(data_dict[selected_db][selected_analysis][selected_column].keys())
-    selected_agg = st.sidebar.selectbox(
-        config_labels["menus"]["agg_function"], agg_functions,
-        help=config_labels["help"]["agg_function"]
-    )
+    selected_agg = st.sidebar.selectbox(config_labels["menus"]["agg_function"], agg_functions)
+
+    # Just use 'ref1' always, no menu for reference
     selected_ref = 'ref1'
+
     grouppings = list(data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref].keys())
-    selected_group = st.sidebar.selectbox(
-        config_labels["menus"]["groupping"], grouppings,
-        help=config_labels["help"]["groupping"]
-    )
+    selected_group = st.sidebar.selectbox(config_labels["menus"]["groupping"], grouppings)
     targets = list(data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref][selected_group].keys())
-    selected_targets = st.sidebar.multiselect(
-        config_labels["menus"]["target"], targets, default=[targets[0]],
-        help=config_labels["help"]["target"]
-    )
+    selected_targets = st.sidebar.multiselect(config_labels["menus"]["target"], targets, default=[targets[0]])
+
+    # If no targets selected, stop
     if not selected_targets:
         st.warning("Please select at least one target.")
         st.stop()
-    var_y_options = ["min", "max"] + list(dictionary_aggregated_values.keys())
-    var_y_type = st.sidebar.selectbox(
-        "Compute var_y from Y using:", var_y_options,
-        help="Choose how to compute the variable Y for the plot."
-    )
-    y0 = dictionary_aggregated_values.get(var_y_type)
-    return (selected_db, selected_analysis, selected_column, selected_agg, selected_ref, selected_group, selected_targets, var_y_type, y0)
 
-def create_figure(data_dict, config_labels, config_colors, custom_xticks, selected_db, selected_analysis, selected_column, selected_agg, selected_ref, selected_group, selected_targets, var_y_type, y0):
+    # var_y calculation options:
+    # Include min, max, and all keys from dictionary_aggregated_values
+    var_y_options = ["min", "max"] + list(dictionary_aggregated_values.keys())
+    var_y_type = st.sidebar.selectbox("Compute var_y from Y using:", var_y_options)
+
+    # If user picks one of dictionary_aggregated_values keys, use that value
+    y0 = None
+    if var_y_type in dictionary_aggregated_values:
+        y0 = dictionary_aggregated_values[var_y_type]
+
     # Determine if we have a third subplot
     add_third_subplot = (selected_group != 'all')
 
@@ -441,9 +437,14 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
                 f"Bar Plot: %{{y}}<extra>%{{fullData.name}}</extra>"
             )
 
-    return fig_plotly, add_third_subplot
+    # Display header (updated as requested)
+    st.header(f"Variable impact for {selected_column} in {selected_db}.")
+    st.plotly_chart(fig_plotly, use_container_width=True)
 
-def display_dataframes(data_dict, config_labels, selected_db, selected_analysis, selected_column, selected_agg, selected_ref, selected_group, selected_targets, add_third_subplot):
+    # ======================
+    # DataFrames Section
+    # ======================
+
     with st.expander(config_labels["headers"]["dataframes"]):
         # Show each selected target's dataframes
         for t in selected_targets:
@@ -487,30 +488,4 @@ def display_dataframes(data_dict, config_labels, selected_db, selected_analysis,
 
 # Entry point
 if __name__ == "__main__":
-    # Set page configuration
-    st.set_page_config(page_title="Data Visualization Tool", layout="wide", page_icon="📊")
-
-    selected_file = setup_sidebar(config_labels, IMAGE_PATH, DATA_PATH)
-    data_dict = load_data_dict(Path(DATA_PATH) / selected_file)
-
-    if not data_dict:
-        st.stop()
-
-    (
-        selected_db, selected_analysis, selected_column, selected_agg, selected_ref,
-        selected_group, selected_targets, var_y_type, y0
-    ) = select_config(data_dict, config_labels, analysis_explanations, dictionary_aggregated_values)
-
-    fig_plotly, add_third_subplot = create_figure(
-        data_dict, config_labels, config_colors, custom_xticks,
-        selected_db, selected_analysis, selected_column, selected_agg, selected_ref,
-        selected_group, selected_targets, var_y_type, y0
-    )
-
-    st.header(f"Variable impact for {selected_column} in {selected_db}.")
-    st.plotly_chart(fig_plotly, use_container_width=True)
-
-    display_dataframes(
-        data_dict, config_labels, selected_db, selected_analysis, selected_column,
-        selected_agg, selected_ref, selected_group, selected_targets, add_third_subplot
-    )
+    main()
