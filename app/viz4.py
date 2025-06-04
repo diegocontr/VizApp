@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from PIL import Image
 import plotly.express as px
+from modelviz.keygen import reverse_key_generator, get_hierarchical_parameter_options, get_all_distinct_parameter_values
+from io import StringIO  # Import StringIO
 
 # ===========================
 # Configurable Paths
@@ -55,6 +57,10 @@ config_labels = {
         "groupping": "Choose how to group the data.",
         "target": "Select the target variable(s) for analysis.",
         "reference": "Select the reference type for Var Y calculation."
+    },
+    "labels": {  # NEW SECTION
+        "bar_plot": "Bar Plot",
+        "bar_plot_var_y": "Bar Plot Var Y"
     }
 }
 
@@ -105,7 +111,7 @@ custom_xticks = {
 @st.cache_data(show_spinner=False)
 def load_data_dict(filename):
     """
-    Loads the nested data_dict from a JSON file, converting JSON strings back to DataFrames.
+    Loads the flat data_dict from a JSON file, converting JSON strings back to DataFrames.
     """
     try:
         file_path = Path(filename)
@@ -116,23 +122,12 @@ def load_data_dict(filename):
         with open(filename, 'r') as f:
             data_dict_json = json.load(f)
 
-        # Traverse the nested dictionary and convert JSON strings back to DataFrames
-        for db in data_dict_json:
-            for analysis in data_dict_json[db]:
-                for column in data_dict_json[db][analysis]:
-                    for agg in data_dict_json[db][analysis][column]:
-                        for ref in data_dict_json[db][analysis][column][agg]:
-                            for group in data_dict_json[db][analysis][column][agg][ref]:
-                                for target in data_dict_json[db][analysis][column][agg][ref][group]:
-                                    entry = data_dict_json[db][analysis][column][agg][ref][group][target]
-                                    df = pd.read_json(entry['df'], orient='split')
-                                    dfh = pd.read_json(entry['dfh'], orient='split')
-                                    data_dict_json[db][analysis][column][agg][ref][group][target]['df'] = df
-                                    data_dict_json[db][analysis][column][agg][ref][group][target]['dfh'] = dfh
-                                    # If dfhg exists, convert it too
-                                    if 'dfhg' in entry:
-                                        dfhg = pd.read_json(entry['dfhg'], orient='split')
-                                        data_dict_json[db][analysis][column][agg][ref][group][target]['dfhg'] = dfhg
+        # Convert JSON strings to DataFrames for each entry
+        for key, entry in data_dict_json.items():
+            entry['df'] = pd.read_json(StringIO(entry['df']), orient='split')
+            entry['dfh'] = pd.read_json(StringIO(entry['dfh']), orient='split')
+            if 'dfhg' in entry:
+                entry['dfhg'] = pd.read_json(StringIO(entry['dfhg']), orient='split')
         return data_dict_json
 
     except Exception as e:
@@ -170,38 +165,51 @@ def setup_sidebar(config_labels, IMAGE_PATH, DATA_PATH):
     return selected_file
 
 def select_config(data_dict, config_labels, analysis_explanations, dictionary_aggregated_values):
-    databases = list(data_dict.keys())
+    # Get all unique parameter values using keygen utility
+    param_names = ["db", "analysis", "column", "agg", "ref", "group", "target"]
+    all_options = get_all_distinct_parameter_values(data_dict, param_names, preserved_types_in_keys=True)
+
     st.sidebar.header("Configuration")
     selected_db = st.sidebar.selectbox(
-        config_labels["menus"]["database"], databases,
+        config_labels["menus"]["database"], all_options["db"],
         help=config_labels["help"]["database"]
     )
-    analysis_types = list(data_dict[selected_db].keys())
     selected_analysis = st.sidebar.selectbox(
-        config_labels["menus"]["analysis_type"], analysis_types,
+        config_labels["menus"]["analysis_type"], all_options["analysis"],
         help=config_labels["help"]["analysis_type"]
     )
     if selected_analysis in analysis_explanations and analysis_explanations[selected_analysis]:
         st.sidebar.write(analysis_explanations[selected_analysis])
-    columns_to_analyse = list(data_dict[selected_db][selected_analysis].keys())
     selected_column = st.sidebar.selectbox(
-        config_labels["menus"]["column_to_analyse"], columns_to_analyse,
+        config_labels["menus"]["column_to_analyse"], all_options["column"],
         help=config_labels["help"]["column_to_analyse"]
     )
-    agg_functions = list(data_dict[selected_db][selected_analysis][selected_column].keys())
     selected_agg = st.sidebar.selectbox(
-        config_labels["menus"]["agg_function"], agg_functions,
+        config_labels["menus"]["agg_function"], all_options["agg"],
         help=config_labels["help"]["agg_function"]
     )
-    selected_ref = 'ref1'
-    grouppings = list(data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref].keys())
+    selected_ref = st.sidebar.selectbox(
+        config_labels["menus"]["reference"], all_options["ref"],
+        help=config_labels["help"]["reference"]
+    )
     selected_group = st.sidebar.selectbox(
-        config_labels["menus"]["groupping"], grouppings,
+        config_labels["menus"]["groupping"], all_options["group"],
         help=config_labels["help"]["groupping"]
     )
-    targets = list(data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref][selected_group].keys())
+    # Filter targets for the current selection
+    filtered_targets = [
+        reverse_key_generator(k, preserved_types=True)["target"]
+        for k in data_dict
+        if reverse_key_generator(k, preserved_types=True).get("db") == selected_db
+        and reverse_key_generator(k, preserved_types=True).get("analysis") == selected_analysis
+        and reverse_key_generator(k, preserved_types=True).get("column") == selected_column
+        and reverse_key_generator(k, preserved_types=True).get("agg") == selected_agg
+        and reverse_key_generator(k, preserved_types=True).get("ref") == selected_ref
+        and reverse_key_generator(k, preserved_types=True).get("group") == selected_group
+    ]
+    filtered_targets = sorted(set(filtered_targets))
     selected_targets = st.sidebar.multiselect(
-        config_labels["menus"]["target"], targets, default=[targets[0]],
+        config_labels["menus"]["target"], filtered_targets, default=filtered_targets[:1],
         help=config_labels["help"]["target"]
     )
     if not selected_targets:
@@ -214,6 +222,11 @@ def select_config(data_dict, config_labels, analysis_explanations, dictionary_ag
     )
     y0 = dictionary_aggregated_values.get(var_y_type)
     return (selected_db, selected_analysis, selected_column, selected_agg, selected_ref, selected_group, selected_targets, var_y_type, y0)
+
+def get_data_entry(data_dict, params):
+    from modelviz.keygen import key_generator
+    key = key_generator(params, preserve_types=True)
+    return data_dict[key]
 
 def create_figure(data_dict, config_labels, config_colors, custom_xticks, selected_db, selected_analysis, selected_column, selected_agg, selected_ref, selected_group, selected_targets, var_y_type, y0):
     # Determine if we have a third subplot
@@ -261,7 +274,17 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
 
     # We'll handle the bar plot only once, using the first selected target
     first_target = selected_targets[0]
-    first_data = data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref][selected_group][first_target]
+
+    params = {
+        "db": selected_db,
+        "analysis": selected_analysis,
+        "column": selected_column,
+        "agg": selected_agg,
+        "ref": selected_ref,
+        "group": selected_group,
+        "target": first_target
+    }
+    first_data = get_data_entry(data_dict, params)    
     dfh_first = first_data['dfh']
 
     if selected_column in custom_xticks:
@@ -294,7 +317,7 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
                 color = plotly_palette[idx % len(plotly_palette)]
                 fig_plotly.add_trace(
                     go.Bar(
-                        x=group_dfhg['x'],
+                        x =group_dfhg['x'],
                         y=group_dfhg['y'],
                         name=f"Group {g} Hist",
                         marker=dict(color=color),
@@ -312,7 +335,16 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
 
     # Loop over selected targets to plot line data
     for target in selected_targets:
-        selected_data = data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref][selected_group][target]
+        params = {
+            "db": selected_db,
+            "analysis": selected_analysis,
+            "column": selected_column,
+            "agg": selected_agg,
+            "ref": selected_ref,
+            "group": selected_group,
+            "target": target
+        }
+        selected_data = get_data_entry(data_dict, params)
         df = selected_data['df']
 
         if df.empty:
@@ -373,7 +405,7 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
         go.Bar(
             x=dfh_first['x'],
             y=dfh_first['y'],
-            name='Bar Plot',
+            name=config_labels["labels"]["bar_plot"],  # Use the label from config
             marker=dict(color=config_colors["bar_plot"]),
             opacity=0.3
         ),
@@ -384,7 +416,7 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
         go.Bar(
             x=dfh_first['x'],
             y=dfh_first['y'],
-            name='Bar Plot Var Y',
+            name=config_labels["labels"]["bar_plot_var_y"],  # Use the label from config
             marker=dict(color=config_colors["bar_plot"]),
             opacity=0.3,
             showlegend=False
@@ -438,7 +470,7 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
         elif trace['type'] == 'bar':
             trace['hovertemplate'] = (
                 f"{config_labels['plot']['x_label']}: %{{x}}<br>"
-                f"Bar Plot: %{{y}}<extra>%{{fullData.name}}</extra>"
+                f"{config_labels['labels']['bar_plot']}: %{{y}}<extra>%{{fullData.name}}</extra>"  # Use the label from config
             )
 
     # If custom xticks available for selected_column, apply them
@@ -476,9 +508,19 @@ def display_dataframes(data_dict, config_labels, selected_db, selected_analysis,
     with st.expander(config_labels["headers"]["dataframes"]):
         # Show each selected target's dataframes
         for t in selected_targets:
-            t_data = data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref][selected_group][t]
+            params = {
+                "db": selected_db,
+                "analysis": selected_analysis,
+                "column": selected_column,
+                "agg": selected_agg,
+                "ref": selected_ref,
+                "group": selected_group,
+                "target": t
+            }
+            t_data = get_data_entry(data_dict, params)
             t_df = t_data['df']
             t_dfh = t_data['dfh']
+
             st.subheader(f"Target: {t}")
             st.write("Line Plot DataFrame (`df`):")
             st.dataframe(t_df)
