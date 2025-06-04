@@ -81,11 +81,18 @@ dictionary_aggregated_values = {
 # Custom X-Ticks Dictionary
 # ===========================
 
+def map_xticks(d):
+    return dict(zip(d['xticks'], d['xticklabels']))
+
 custom_xticks = {
-    'column1': {
-        'xticks': [0, 5, 10, 15],
-        'xticklabels': ['A', 'B', 'C', 'D']
-    }
+#    'column1': {
+#        'xticks': [0, 5, 10, 15],
+#        'xticklabels': ['A', 'B', 'C', 'D']
+#    }
+   'column1': {
+       'xticks': list(range(1,101)),
+       'xticklabels': [str(i) for i in range(1, 101)]
+   }
     # Add more entries if needed
 }
 
@@ -212,6 +219,8 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
 
     # Get figure size from configuration
     fig_width, fig_height = config_labels["plot"]["fig_size"]
+    if add_third_subplot:
+        fig_height = int(fig_height * 1.5)  # Increase height for three subplots
 
     # Determine subplot rows
     if add_third_subplot:
@@ -253,38 +262,29 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
     first_data = data_dict[selected_db][selected_analysis][selected_column][selected_agg][selected_ref][selected_group][first_target]
     dfh_first = first_data['dfh']
 
+    if selected_column in custom_xticks:
+        print( dfh_first['x'].unique())
+        dfh_first['x'] = dfh_first['x'].map( map_xticks( custom_xticks[selected_column]))
+        dfh_first = dfh_first.sort_values('x')
+
+
     if dfh_first.empty:
         st.error("No bar plot data available for the selected configuration.")
         st.stop()
 
-    # Add bar plot once to the first two subplots
-    fig_plotly.add_trace(
-        go.Bar(
-            x=dfh_first['x'],
-            y=dfh_first['y'],
-            name='Bar Plot',
-            marker=dict(color=config_colors["bar_plot"]),
-            opacity=0.3
-        ),
-        row=1, col=1,
-        secondary_y=True
-    )
-    fig_plotly.add_trace(
-        go.Bar(
-            x=dfh_first['x'],
-            y=dfh_first['y'],
-            name='Bar Plot Var Y',
-            marker=dict(color=config_colors["bar_plot"]),
-            opacity=0.3,
-            showlegend=False
-        ),
-        row=2, col=1,
-        secondary_y=True
-    )
+    group_list = None
 
+    # ---------------------------------------------
     # If we have a third subplot (grouped histogram per group), plot dfhg
     if add_third_subplot and 'dfhg' in first_data:
         dfhg_first = first_data['dfhg']
+        if selected_column in custom_xticks:
+            dfhg_first['x'] = dfhg_first['x'].map( map_xticks( custom_xticks[selected_column]))
+            group_list = dfhg_first['group'].unique().tolist()
+            dfhg_first['order'] = dfhg_first['group'].apply(lambda g: group_list.index(g))
+            dfhg_first = dfhg_first.sort_values(['order','x'])
+
+
         if not dfhg_first.empty:
             # group-based histogram: one bar trace per group
             unique_groups_hg = dfhg_first['group'].unique()
@@ -366,39 +366,38 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
             )
 
             line_index += 1
+    # ---------------------------------------------
+    # Add bar plot once to the first two subplots
+    fig_plotly.add_trace(
+        go.Bar(
+            x=dfh_first['x'],
+            y=dfh_first['y'],
+            name='Bar Plot',
+            marker=dict(color=config_colors["bar_plot"]),
+            opacity=0.3
+        ),
+        row=1, col=1,
+        secondary_y=True
+    )
+    fig_plotly.add_trace(
+        go.Bar(
+            x=dfh_first['x'],
+            y=dfh_first['y'],
+            name='Bar Plot Var Y',
+            marker=dict(color=config_colors["bar_plot"]),
+            opacity=0.3,
+            showlegend=False
+        ),
+        row=2, col=1,
+        secondary_y=True
+    )
+    # ---------------------------------------------
 
     # If after looping no data was plotted (e.g., all were empty), stop
     if len(fig_plotly.data) == 0:
         st.error("No data was plotted. Check your selections.")
         st.stop()
-
-    # If custom xticks available for selected_column, apply them
-    if selected_column in custom_xticks:
-        xticks = custom_xticks[selected_column]['xticks']
-        xticklabels = custom_xticks[selected_column]['xticklabels']
-
-        # Update x-axis for first two subplots
-        fig_plotly.update_xaxes(
-            tickmode='array',
-            tickvals=xticks,
-            ticktext=xticklabels,
-            row=1, col=1
-        )
-        fig_plotly.update_xaxes(
-            tickmode='array',
-            tickvals=xticks,
-            ticktext=xticklabels,
-            row=2, col=1
-        )
-        # Also update third if it exists
-        if add_third_subplot:
-            fig_plotly.update_xaxes(
-                tickmode='array',
-                tickvals=xticks,
-                ticktext=xticklabels,
-                row=3, col=1
-            )
-
+    # ---------------------------------------------
     # Update axes titles
     fig_plotly.update_yaxes(title_text=config_labels["plot"]["y_label_line"], row=1, col=1, secondary_y=False)
     fig_plotly.update_yaxes(title_text="Bar Plot Y-Axis", row=1, col=1, secondary_y=True)
@@ -440,6 +439,35 @@ def create_figure(data_dict, config_labels, config_colors, custom_xticks, select
                 f"{config_labels['plot']['x_label']}: %{{x}}<br>"
                 f"Bar Plot: %{{y}}<extra>%{{fullData.name}}</extra>"
             )
+
+    # If custom xticks available for selected_column, apply them
+    # if selected_column in custom_xticks:
+    #     xticks = custom_xticks[selected_column]['xticks']
+    #     xticklabels = custom_xticks[selected_column]['xticklabels']
+
+    #     # Update x-axis for first two subplots
+    #     fig_plotly.update_xaxes(
+    #         tickmode='array',
+    #         tickvals=xticks,
+    #         ticktext=xticklabels,
+    #         row=1, col=1
+    #     )
+    #     fig_plotly.update_xaxes(
+    #         tickmode='array',
+    #         tickvals=xticks,
+    #         ticktext=xticklabels,
+    #         row=2, col=1
+    #     )
+    #     # Also update third if it exists
+    #     if add_third_subplot:
+    #         fig_plotly.update_xaxes(
+    #             tickmode='array',
+    #             tickvals=xticks,
+    #             ticktext=xticklabels,
+    #             row=3, col=1
+    #         )
+
+
 
     return fig_plotly, add_third_subplot
 
