@@ -7,7 +7,7 @@ from pathlib import Path
 from PIL import Image
 import plotly.express as px
 from io import StringIO
-from app.config import config_labels, config_colors, analysis_explanations, dictionary_aggregated_values
+from modelviz.config import config_labels, config_colors, analysis_explanations, dictionary_aggregated_values, custom_xticks
 from modelviz.data_loader import load_data_dict, load_logo
 from modelviz.sidebar_setup import setup_sidebar, select_config
 from modelviz.plotting import create_figure, map_xticks
@@ -18,11 +18,6 @@ from modelviz.dataframe_display import display_dataframes
 # ===========================
 DATA_PATH = './data'
 IMAGE_PATH = './images/log.jpeg'
-
-# ===========================
-# Custom X-Ticks Dictionary
-# ===========================
-
 
 # Entry point
 if __name__ == "__main__":
@@ -46,7 +41,7 @@ if __name__ == "__main__":
         selected_group, selected_targets, var_y_type, y0
     )
 
-    st.header(f"Variable impact for {selected_column} in {selected_db}.")
+    st.header(f"{selected_column}.")
     st.plotly_chart(fig_plotly, use_container_width=True)
 
     display_dataframes(
