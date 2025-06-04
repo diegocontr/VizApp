@@ -24,9 +24,6 @@ IMAGE_PATH = './images/log.jpeg'
 # ===========================
 
 
-    # Add more entries if needed
-}
-
 # Entry point
 if __name__ == "__main__":
     # Set page configuration
