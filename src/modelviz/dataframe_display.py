@@ -54,6 +54,5 @@ def display_dataframes(data_dict, config_labels, selected_db, selected_analysis,
                     mime='text/csv',
                 )
 def get_data_entry(data_dict, params):
-    from .keygen import key_generator
     key = key_generator(params, preserve_types=True)
     return data_dict[key]
