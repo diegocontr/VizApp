@@ -22,13 +22,21 @@ def load_data_dict(filename):
         with open(filename, "r") as f:
             data_dict_json = json.load(f)
 
+        # Extract plot_data from the JSON
+        if "plot_data" not in data_dict_json:
+            st.error("The JSON file does not contain 'plot_data'.")
+            return {}
+
+        data_dict = data_dict_json["plot_data"]
+        global_data = data_dict_json["global_data"] if "global_data" in data_dict_json else data_dict
+
         # Convert JSON strings to DataFrames for each entry
-        for key, entry in data_dict_json.items():
+        for key, entry in data_dict.items():
             entry["df"] = pd.read_json(StringIO(entry["df"]), orient="split")
             entry["dfh"] = pd.read_json(StringIO(entry["dfh"]), orient="split")
             if "dfhg" in entry:
                 entry["dfhg"] = pd.read_json(StringIO(entry["dfhg"]), orient="split")
-        return data_dict_json
+        return data_dict, global_data
 
     except Exception as e:
         st.error(f"An error occurred while loading the data: {e}")

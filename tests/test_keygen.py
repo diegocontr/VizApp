@@ -1,4 +1,5 @@
 import pytest
+
 from modelviz.keygen import (
     get_all_distinct_parameter_values,
     get_hierarchical_parameter_options,

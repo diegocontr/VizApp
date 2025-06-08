@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import streamlit as st
+
 from modelviz.config import (
     analysis_explanations,
     config_colors,
     config_labels,
     custom_xticks,
-    dictionary_aggregated_values,
 )
 from modelviz.data_loader import load_data_dict
 from modelviz.dataframe_display import display_dataframes
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     st.set_page_config(page_title="Data Visualization Tool", layout="wide", page_icon="📊")
 
     selected_file = setup_sidebar(config_labels, IMAGE_PATH, DATA_PATH)
-    data_dict = load_data_dict(Path(DATA_PATH) / selected_file)
+    data_dict, dictionary_aggregated_values = load_data_dict(Path(DATA_PATH) / selected_file)
 
     if not data_dict:
         st.stop()
