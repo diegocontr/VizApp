@@ -47,8 +47,10 @@ analysis_explanations = {
     # Add more as needed
 }
 
-dictionary_aggregated_values = {"mean": 100, "median": 1000}
-
+global_settings = {
+    "dictionary_aggregated_values": {"mean": 100, "median": 1000}
+    # Add other global settings here if needed
+}
 
 custom_xticks = {
     #    'column1': {
@@ -57,4 +59,23 @@ custom_xticks = {
     #    }
     "column1": {"xticks": list(range(1, 101)), "xticklabels": [str(i) for i in range(1, 101)]}
     # Add more entries if needed
+}
+
+data_retrieval_config = {
+    "df": {
+        "source_dict_key": "plot_data",  # Key in the main loaded JSON where this data resides
+        "data_field_in_entry": "df",  # Key within the entry that holds the DataFrame
+        "key_params": ["db", "analysis", "column", "agg", "ref", "group", "target"],
+    },
+    "dfh": {
+        "source_dict_key": "plot_data",
+        "data_field_in_entry": "dfh",
+        "key_params": ["db", "analysis", "column", "agg", "ref", "group", "target"],  # Parameters to build the key
+        # "fixed_params": {"group": None} # Hardcoded parameters for this key
+    },
+    "dfhg": {
+        "source_dict_key": "plot_data",
+        "data_field_in_entry": "dfhg",
+        "key_params": ["db", "analysis", "column", "agg", "ref", "group", "target"],
+    },
 }
